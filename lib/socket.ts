@@ -24,7 +24,9 @@ export function registerHandlers(io: Server) {
     // Start Session
     socket.on("start-session", ({ roomCode, duration }) => {
       const serverNow = Date.now();
-      const endsAt = new Date(serverNow + Number(duration) * 60000).toISOString();
+      const endsAt = new Date(
+        serverNow + Number(duration) * 60000,
+      ).toISOString();
 
       // Broadcast both the calculated end time and the server timestamp
       // so clients can compensate for clock skew when rendering the timer.
@@ -64,12 +66,12 @@ export function registerHandlers(io: Server) {
       const userName = socket.data.userName || "Anonymous";
       const id = Math.random().toString(36).substring(2, 15);
       const timestamp = Date.now();
-      
+
       io.to(roomCode).emit("chat-message", {
         id,
         emoji,
         userName,
-        timestamp
+        timestamp,
       });
     });
 
