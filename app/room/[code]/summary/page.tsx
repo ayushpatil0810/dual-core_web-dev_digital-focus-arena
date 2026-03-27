@@ -1,13 +1,28 @@
 "use client";
 
-import { useEffect, use, Suspense } from "react";
+import { useEffect, use, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import confetti from "canvas-confetti";
 import Link from "next/link";
-import { Copy, Plus, Home, Clock, AlertTriangle, Coffee } from "lucide-react";
+import { Copy, Plus, Home, Clock, AlertTriangle, Coffee, Trophy } from "lucide-react";
+
+type LeaderboardRow = {
+  id: string;
+  userName: string;
+  focusScore: number;
+  tabSwitches: number;
+  idleMinutes: number;
+  tasksCompleted: number;
+  totalTasks: number;
+};
 
 function SummaryContent({ roomCode }: { roomCode: string }) {
   const searchParams = useSearchParams();
+
+  const [leaderboard, setLeaderboard] = useState<LeaderboardRow[]>([]);
+  const [roomDurationMinutes, setRoomDurationMinutes] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const score       = parseInt(searchParams.get("score")     || "0", 10);
   const switches    = parseInt(searchParams.get("switches")  || "0", 10);
@@ -15,6 +30,51 @@ function SummaryContent({ roomCode }: { roomCode: string }) {
   const awayTimeSec = parseInt(searchParams.get("awayTime")  || "0", 10);   // seconds
   const focusTimeSec= parseInt(searchParams.get("focusTime") || "0", 10);   // seconds
   const inactivity  = parseInt(searchParams.get("inactivity")|| "0", 10);
+
+  // Fetch leaderboard for this room
+  useEffect(() => {
+    let cancelled = false;
+
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const roomRes = await fetch(`/api/rooms?code=${roomCode}`);
+        if (roomRes.ok) {
+          const roomData = await roomRes.json();
+          if (roomData?.room?.duration) {
+            setRoomDurationMinutes(Number(roomData.room.duration));
+          }
+        }
+
+        const res = await fetch(`/api/sessions?roomCode=${roomCode}`);
+        if (!res.ok) {
+          throw new Error(`Failed to load leaderboard (${res.status})`);
+        }
+        const data = await res.json();
+        const rows: LeaderboardRow[] = (data.sessions || []).map((s: any) => ({
+          id: s.id,
+          userName: s.userName || "Operative",
+          focusScore: Number(s.focusScore) || 0,
+          tabSwitches: Number(s.tabSwitches) || 0,
+          idleMinutes: Number(s.idleMinutes) || 0,
+          tasksCompleted: Number(s.tasksCompleted) || 0,
+          totalTasks: Number(s.totalTasks) || 0,
+        }));
+        if (!cancelled) setLeaderboard(rows);
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [roomCode]);
 
   /** Format seconds → "Xm Ys" */
   const fmtSeconds = (s: number) => {
@@ -100,6 +160,64 @@ function SummaryContent({ roomCode }: { roomCode: string }) {
             <div className="font-heading text-5xl font-black text-[#ff3b00]">{tasks}</div>
             <div className="text-xs opacity-50 mt-1">tasks completed</div>
           </div>
+        </div>
+
+        {/* ── Leaderboard ── */}
+        <div className="border-4 border-[#111] dark:border-[#f5f4ef] p-6 mb-10 bg-white dark:bg-[#0a0a0a]">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <div className="text-xs font-bold uppercase tracking-widest opacity-70">Leaderboard</div>
+              <div className="text-sm opacity-50">Room {roomCode}</div>
+            </div>
+            <Trophy className="w-5 h-5 text-[#ff3b00]" />
+          </div>
+
+          {loading ? (
+            <div className="text-sm opacity-60">Loading leaderboard...</div>
+          ) : error ? (
+            <div className="text-sm text-[#ff3b00]">{error}</div>
+          ) : leaderboard.length === 0 ? (
+            <div className="text-sm opacity-60">No session results recorded yet.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="uppercase text-[10px] tracking-widest opacity-70">
+                  <tr className="border-b border-[#111]/10 dark:border-[#f5f4ef]/10">
+                    <th className="py-2 pr-2">Rank</th>
+                    <th className="py-2 pr-2">Name</th>
+                    <th className="py-2 pr-2">Score</th>
+                    <th className="py-2 pr-2">Focus Time</th>
+                    <th className="py-2 pr-2">Switches</th>
+                    <th className="py-2 pr-2">Tasks</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {leaderboard.map((row, idx) => {
+                    const estFocusSeconds = roomDurationMinutes
+                      ? Math.max(0, roomDurationMinutes * 60 - row.idleMinutes * 60)
+                      : null;
+                    return (
+                      <tr
+                        key={row.id}
+                        className={`border-b border-[#111]/10 dark:border-[#f5f4ef]/10 ${idx === 0 ? "bg-[#ff3b00]/10" : ""}`}
+                      >
+                        <td className="py-2 pr-2 font-heading font-black">#{idx + 1}</td>
+                        <td className="py-2 pr-2 font-semibold">{row.userName}</td>
+                        <td className="py-2 pr-2 font-heading font-black text-[#ff3b00]">{row.focusScore}</td>
+                        <td className="py-2 pr-2">
+                          {estFocusSeconds !== null ? fmtSeconds(estFocusSeconds) : "—"}
+                        </td>
+                        <td className="py-2 pr-2">{row.tabSwitches}</td>
+                        <td className="py-2 pr-2">
+                          {row.tasksCompleted}/{row.totalTasks || 0}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* ── Secondary Stats Row ── */}

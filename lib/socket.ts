@@ -1,5 +1,7 @@
 import { Server, Socket } from "socket.io";
 
+const SYNC_GUARD_MS = 150; // small buffer to absorb latency when starting timers
+
 export function registerHandlers(io: Server) {
   io.on("connection", (socket: Socket) => {
     console.log("Client connected:", socket.id);
@@ -25,7 +27,7 @@ export function registerHandlers(io: Server) {
     socket.on("start-session", ({ roomCode, duration }) => {
       const serverNow = Date.now();
       const endsAt = new Date(
-        serverNow + Number(duration) * 60000,
+        serverNow + Number(duration) * 60000 + SYNC_GUARD_MS,
       ).toISOString();
 
       // Broadcast both the calculated end time and the server timestamp
@@ -35,7 +37,7 @@ export function registerHandlers(io: Server) {
 
     // End Session Early
     socket.on("end-session", ({ roomCode }) => {
-      io.to(roomCode).emit("session-ended", { reason: "host" });
+      io.to(roomCode).emit("session-ended", { reason: "host", serverNow: Date.now() });
     });
 
     // Tab Switch / status change (also used for research-mode status)
@@ -98,7 +100,7 @@ export function registerHandlers(io: Server) {
 
     // Pomodoro Cycle
     socket.on("pomodoro-cycle", ({ roomCode, phase, endsAt }) => {
-      io.to(roomCode).emit("pomodoro-cycle", { phase, endsAt });
+      io.to(roomCode).emit("pomodoro-cycle", { phase, endsAt, serverNow: Date.now() });
     });
 
     socket.on("disconnect", () => {

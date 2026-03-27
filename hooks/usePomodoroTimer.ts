@@ -24,6 +24,8 @@ interface PomodoroTimerReturn {
   startCycle: (phase: PomodoroPhase) => void;
 }
 
+const SYNC_GUARD_MS = 150; // small buffer to absorb latency when starting timers
+
 /**
  * usePomodoroTimer
  *
@@ -57,7 +59,9 @@ export function usePomodoroTimer({
 
       const duration =
         newPhase === "work" ? config.workMinutes : config.breakMinutes;
-      const endsAt = new Date(Date.now() + duration * 60000).toISOString();
+      const endsAt = new Date(
+        Date.now() + duration * 60000 + SYNC_GUARD_MS,
+      ).toISOString();
 
       socket.emit("pomodoro-cycle", {
         roomCode,
@@ -75,12 +79,19 @@ export function usePomodoroTimer({
     const handleCycle = ({
       phase: newPhase,
       endsAt,
+      serverNow,
     }: {
       phase: PomodoroPhase;
       endsAt: string;
+      serverNow?: number;
     }) => {
+      const drift = serverNow ? Date.now() - serverNow : 0;
+      const correctedEndsAt = new Date(
+        new Date(endsAt).getTime() - drift,
+      ).toISOString();
+
       setPhase(newPhase);
-      setCurrentCycleEndsAt(endsAt);
+      setCurrentCycleEndsAt(correctedEndsAt);
 
       // Increment cycle count when transitioning from work to break
       if (newPhase === "break") {
