@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, text, timestamp, boolean, index } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, boolean, integer, index } from "drizzle-orm/pg-core";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -99,8 +99,8 @@ export const room = pgTable("room", {
   hostId: text("host_id")
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
-  duration: text("duration").notNull(), // string mapping for numbers
-  maxMembers: text("max_members").notNull(),
+  duration: integer("duration").notNull(),
+  maxMembers: integer("max_members").notNull(),
   status: text("status", { enum: ["waiting", "active", "ended"] })
     .default("waiting")
     .notNull(),
@@ -115,14 +115,14 @@ export const focusSession = pgTable("focus_session", {
     .notNull()
     .references(() => user.id, { onDelete: "cascade" }),
   userName: text("user_name").notNull(),
-  focusScore: text("focus_score").notNull(),
-  tabSwitches: text("tab_switches").notNull(),
-  idleMinutes: text("idle_minutes").notNull(),
-  tasksCompleted: text("tasks_completed").notNull(),
-  totalTasks: text("total_tasks").notNull(),
+  focusScore: integer("focus_score").notNull(),
+  tabSwitches: integer("tab_switches").notNull(),
+  idleMinutes: integer("idle_minutes").notNull(),
+  tasksCompleted: integer("tasks_completed").notNull(),
+  totalTasks: integer("total_tasks").notNull(),
   pomodoroEnabled: boolean("pomodoro_enabled").default(false),
-  cyclesCompleted: text("cycles_completed").default("0"),
-  breakMinutes: text("break_minutes").default("0"),
+  cyclesCompleted: integer("cycles_completed").default(0),
+  breakMinutes: integer("break_minutes").default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
