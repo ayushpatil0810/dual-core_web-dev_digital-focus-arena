@@ -47,7 +47,7 @@ export function useDistractionTracker(
   roomCode: string,
   userName: string,
   sessionActive: boolean,
-  researchMode: boolean
+  researchMode: boolean,
 ): DistractionState {
   const [distractions, setDistractions] = useState(0);
   const [totalAwayTime, setTotalAwayTime] = useState(0);
@@ -157,7 +157,14 @@ export function useDistractionTracker(
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
-  }, [socket, roomCode, userName, sessionActive, researchMode, clearToastTimer]);
+  }, [
+    socket,
+    roomCode,
+    userName,
+    sessionActive,
+    researchMode,
+    clearToastTimer,
+  ]);
 
   // ─── Inactivity Tracking ──────────────────────────────────────────────────
   //
@@ -229,16 +236,32 @@ export function useDistractionTracker(
       resetInactivityTimer();
     }
 
-    const inputEvents = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"] as const;
-    inputEvents.forEach((e) => window.addEventListener(e, resetInactivityTimer, { passive: true }));
-    document.addEventListener("visibilitychange", handleVisibilityForInactivity);
+    const inputEvents = [
+      "mousemove",
+      "mousedown",
+      "keydown",
+      "touchstart",
+      "scroll",
+    ] as const;
+    inputEvents.forEach((e) =>
+      window.addEventListener(e, resetInactivityTimer, { passive: true }),
+    );
+    document.addEventListener(
+      "visibilitychange",
+      handleVisibilityForInactivity,
+    );
 
     return () => {
-      inputEvents.forEach((e) => window.removeEventListener(e, resetInactivityTimer));
-      document.removeEventListener("visibilitychange", handleVisibilityForInactivity);
+      inputEvents.forEach((e) =>
+        window.removeEventListener(e, resetInactivityTimer),
+      );
+      document.removeEventListener(
+        "visibilitychange",
+        handleVisibilityForInactivity,
+      );
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sessionActive]); // only re-run when session toggles on/off
 
   // ─── Cleanup toast timer on unmount ───────────────────────────────────────

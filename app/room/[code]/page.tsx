@@ -39,7 +39,6 @@ export interface RoomData {
   maxMembers: number;
 }
 
-
 export default function RoomPage({
   params: paramsPromise,
 }: {
@@ -631,7 +630,9 @@ export default function RoomPage({
                     key={m.socketId}
                     className={`border-2 p-4 flex flex-col gap-3 relative overflow-hidden transition-colors ${cardTone}`}
                   >
-                    <div className={`absolute top-0 left-0 w-2 h-full ${accentTone}`} />
+                    <div
+                      className={`absolute top-0 left-0 w-2 h-full ${accentTone}`}
+                    />
                     <div className="flex justify-between items-center pl-4">
                       <div className="font-heading font-black text-xl uppercase tracking-wider truncate mr-2">
                         {m.userName || "Unknown"}
@@ -643,11 +644,13 @@ export default function RoomPage({
                       </div>
                     </div>
                     <div className="grid grid-cols-2 gap-2 pl-4 text-xs font-bold opacity-70">
-                      <div className={m.tabSwitches > 0 ? "text-[#ff3b00]" : ""}>
+                      <div
+                        className={m.tabSwitches > 0 ? "text-[#ff3b00]" : ""}
+                      >
                         DST: {m.tabSwitches}
                       </div>
                       <div>
-                        TSK: {" "}
+                        TSK:{" "}
                         {m.tasks?.filter((t: any) => t.completed).length || 0}/
                         {m.tasks?.length || 0}
                       </div>
