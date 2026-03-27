@@ -59,7 +59,10 @@ export async function GET(req: NextRequest) {
     const roomCode = searchParams.get("roomCode");
 
     if (!roomCode) {
-      return NextResponse.json({ error: "roomCode is required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "roomCode is required" },
+        { status: 400 },
+      );
     }
 
     const sessions = await db.query.focusSession.findMany({

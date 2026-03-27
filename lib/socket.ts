@@ -37,7 +37,10 @@ export function registerHandlers(io: Server) {
 
     // End Session Early
     socket.on("end-session", ({ roomCode }) => {
-      io.to(roomCode).emit("session-ended", { reason: "host", serverNow: Date.now() });
+      io.to(roomCode).emit("session-ended", {
+        reason: "host",
+        serverNow: Date.now(),
+      });
     });
 
     // Tab Switch / status change (also used for research-mode status)
@@ -100,7 +103,11 @@ export function registerHandlers(io: Server) {
 
     // Pomodoro Cycle
     socket.on("pomodoro-cycle", ({ roomCode, phase, endsAt }) => {
-      io.to(roomCode).emit("pomodoro-cycle", { phase, endsAt, serverNow: Date.now() });
+      io.to(roomCode).emit("pomodoro-cycle", {
+        phase,
+        endsAt,
+        serverNow: Date.now(),
+      });
     });
 
     socket.on("disconnect", () => {
