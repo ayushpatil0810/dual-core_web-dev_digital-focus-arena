@@ -25,19 +25,21 @@ export default async function DashboardPage() {
   const avgScore =
     totalSessions > 0
       ? Math.round(
-          sessions.reduce((sum, s) => sum + parseInt(s.focusScore || "0", 10), 0) /
-            totalSessions
+          sessions.reduce(
+            (sum, s) => sum + Number(s.focusScore ?? 0),
+            0,
+          ) / totalSessions,
         )
       : 0;
 
   const bestScore =
     totalSessions > 0
-      ? Math.max(...sessions.map((s) => parseInt(s.focusScore || "0", 10)))
+      ? Math.max(...sessions.map((s) => Number(s.focusScore ?? 0)))
       : 0;
 
   const totalTasksCompleted = sessions.reduce(
-    (sum, s) => sum + parseInt(s.tasksCompleted || "0", 10),
-    0
+    (sum, s) => sum + Number(s.tasksCompleted ?? 0),
+    0,
   );
 
   // ── Helper ───────────────────────────────────────────────────────────────
@@ -56,7 +58,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-8 md:p-16 min-h-full flex flex-col gap-12">
-
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
@@ -97,9 +98,13 @@ export default async function DashboardPage() {
           <div className="border-4 border-[#111] dark:border-[#f5f4ef] p-6 group hover:bg-[#111] dark:hover:bg-[#f5f4ef] hover:text-[#f5f4ef] dark:hover:text-[#111] transition-colors">
             <div className="flex items-center gap-2 mb-3 opacity-60">
               <Zap className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Sessions</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Sessions
+              </span>
             </div>
-            <div className="font-heading text-5xl font-black leading-none">{totalSessions}</div>
+            <div className="font-heading text-5xl font-black leading-none">
+              {totalSessions}
+            </div>
             <div className="text-xs opacity-50 mt-1">arenas entered</div>
           </div>
 
@@ -107,9 +112,13 @@ export default async function DashboardPage() {
           <div className="border-4 border-[#111] dark:border-[#f5f4ef] p-6 group hover:bg-[#111] dark:hover:bg-[#f5f4ef] hover:text-[#f5f4ef] dark:hover:text-[#111] transition-colors">
             <div className="flex items-center gap-2 mb-3 opacity-60">
               <TrendingUp className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Avg Score</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Avg Score
+              </span>
             </div>
-            <div className={`font-heading text-5xl font-black leading-none ${totalSessions > 0 ? scoreColor(avgScore) : ""}`}>
+            <div
+              className={`font-heading text-5xl font-black leading-none ${totalSessions > 0 ? scoreColor(avgScore) : ""}`}
+            >
               {totalSessions > 0 ? avgScore : "—"}
             </div>
             <div className="text-xs opacity-50 mt-1">/ 100 focus score</div>
@@ -119,9 +128,13 @@ export default async function DashboardPage() {
           <div className="border-4 border-[#111] dark:border-[#f5f4ef] p-6 group hover:bg-[#111] dark:hover:bg-[#f5f4ef] hover:text-[#f5f4ef] dark:hover:text-[#111] transition-colors">
             <div className="flex items-center gap-2 mb-3 opacity-60">
               <Trophy className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Best Score</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Best Score
+              </span>
             </div>
-            <div className={`font-heading text-5xl font-black leading-none ${totalSessions > 0 ? scoreColor(bestScore) : ""}`}>
+            <div
+              className={`font-heading text-5xl font-black leading-none ${totalSessions > 0 ? scoreColor(bestScore) : ""}`}
+            >
               {totalSessions > 0 ? bestScore : "—"}
             </div>
             <div className="text-xs opacity-50 mt-1">personal best</div>
@@ -131,7 +144,9 @@ export default async function DashboardPage() {
           <div className="border-4 border-[#111] dark:border-[#f5f4ef] p-6 group hover:bg-[#111] dark:hover:bg-[#f5f4ef] hover:text-[#f5f4ef] dark:hover:text-[#111] transition-colors">
             <div className="flex items-center gap-2 mb-3 opacity-60">
               <Target className="w-4 h-4" />
-              <span className="text-[10px] font-black uppercase tracking-widest">Objectives</span>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                Objectives
+              </span>
             </div>
             <div className="font-heading text-5xl font-black leading-none text-[#ff3b00]">
               {totalTasksCompleted}
@@ -149,7 +164,9 @@ export default async function DashboardPage() {
 
         {sessions.length === 0 ? (
           <div className="border-4 border-dashed border-[#111]/20 dark:border-[#f5f4ef]/20 p-16 text-center">
-            <div className="font-heading text-4xl font-black uppercase opacity-20 mb-3">No Data</div>
+            <div className="font-heading text-4xl font-black uppercase opacity-20 mb-3">
+              No Data
+            </div>
             <p className="font-bold uppercase tracking-widest opacity-40 text-sm">
               No active deployments recorded yet.
             </p>
@@ -163,10 +180,10 @@ export default async function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
             {sessions.map((s) => {
-              const score = parseInt(s.focusScore || "0", 10);
-              const switches = parseInt(s.tabSwitches || "0", 10);
-              const completed = parseInt(s.tasksCompleted || "0", 10);
-              const total = parseInt(s.totalTasks || "0", 10);
+              const score = Number(s.focusScore ?? 0);
+              const switches = Number(s.tabSwitches ?? 0);
+              const completed = Number(s.tasksCompleted ?? 0);
+              const total = Number(s.totalTasks ?? 0);
 
               return (
                 <div
@@ -188,18 +205,31 @@ export default async function DashboardPage() {
 
                   <div className="grid grid-cols-3 gap-3">
                     <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">Score</div>
-                      <div className={`font-heading text-2xl font-black ${scoreColor(score)}`}>{score}</div>
-                    </div>
-                    <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">Tasks</div>
-                      <div className="font-heading text-2xl font-black">
-                        {completed}<span className="text-sm opacity-50">/{total}</span>
+                      <div className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">
+                        Score
+                      </div>
+                      <div
+                        className={`font-heading text-2xl font-black ${scoreColor(score)}`}
+                      >
+                        {score}
                       </div>
                     </div>
                     <div>
-                      <div className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">DST</div>
-                      <div className={`font-heading text-2xl font-black ${switches > 0 ? "text-[#ff3b00]" : ""}`}>
+                      <div className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">
+                        Tasks
+                      </div>
+                      <div className="font-heading text-2xl font-black">
+                        {completed}
+                        <span className="text-sm opacity-50">/{total}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] font-black uppercase tracking-widest opacity-50 mb-0.5">
+                        DST
+                      </div>
+                      <div
+                        className={`font-heading text-2xl font-black ${switches > 0 ? "text-[#ff3b00]" : ""}`}
+                      >
                         {switches}
                       </div>
                     </div>
@@ -210,7 +240,6 @@ export default async function DashboardPage() {
           </div>
         )}
       </section>
-
     </div>
   );
 }
