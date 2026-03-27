@@ -166,12 +166,21 @@ export default function RoomPage({
 
     socket.on("members-updated", (m: Member[]) => setMembers(m));
 
-    socket.on("session-started", ({ endsAt }: { endsAt: string }) => {
-      setStatus("active");
-      setEndsAt(endsAt);
-      // Mark session start for focus time calculation
-      startSession();
-    });
+    socket.on(
+      "session-started",
+      ({ endsAt, serverNow }: { endsAt: string; serverNow?: number }) => {
+        // Adjust for client/server clock skew so timers start in sync.
+        const drift = serverNow ? Date.now() - serverNow : 0;
+        const correctedEndsAt = new Date(
+          new Date(endsAt).getTime() - drift,
+        ).toISOString();
+
+        setStatus("active");
+        setEndsAt(correctedEndsAt);
+        // Mark session start for focus time calculation
+        startSession();
+      },
+    );
 
     socket.on("chat-message", ({ id, emoji, userName, timestamp }) => {
       setChatMessages((prev) => [...prev, { id, emoji, userName, timestamp }]);

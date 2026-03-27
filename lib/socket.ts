@@ -23,8 +23,12 @@ export function registerHandlers(io: Server) {
 
     // Start Session
     socket.on("start-session", ({ roomCode, duration }) => {
-      const endsAt = new Date(Date.now() + duration * 60000).toISOString();
-      io.to(roomCode).emit("session-started", { endsAt });
+      const serverNow = Date.now();
+      const endsAt = new Date(serverNow + Number(duration) * 60000).toISOString();
+
+      // Broadcast both the calculated end time and the server timestamp
+      // so clients can compensate for clock skew when rendering the timer.
+      io.to(roomCode).emit("session-started", { endsAt, serverNow });
     });
 
     // End Session Early
