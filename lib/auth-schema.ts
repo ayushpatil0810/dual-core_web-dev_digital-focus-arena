@@ -91,3 +91,42 @@ export const accountRelations = relations(account, ({ one }) => ({
     references: [user.id],
   }),
 }));
+
+export const room = pgTable("room", {
+  id: text("id").primaryKey(),
+  code: text("code").notNull().unique(),
+  name: text("name").notNull(),
+  hostId: text("host_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  duration: text("duration").notNull(), // string mapping for numbers
+  maxMembers: text("max_members").notNull(),
+  status: text("status", { enum: ["waiting", "active", "ended"] }).default("waiting").notNull(),
+  startedAt: timestamp("started_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const focusSession = pgTable("focus_session", {
+  id: text("id").primaryKey(),
+  roomCode: text("room_code").notNull(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  userName: text("user_name").notNull(),
+  focusScore: text("focus_score").notNull(), 
+  tabSwitches: text("tab_switches").notNull(),
+  idleMinutes: text("idle_minutes").notNull(),
+  tasksCompleted: text("tasks_completed").notNull(),
+  totalTasks: text("total_tasks").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const roomRelations = relations(room, ({ one }) => ({
+  host: one(user, {
+    fields: [room.hostId],
+    references: [user.id],
+  }),
+}));
+
+export const focusSessionRelations = relations(focusSession, ({ one }) => ({
+  user: one(user, {
+    fields: [focusSession.userId],
+    references: [user.id],
+  }),
+}));
