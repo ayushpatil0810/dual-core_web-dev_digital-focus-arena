@@ -7,8 +7,16 @@ export function registerHandlers(io: Server) {
     // Join Room
     socket.on("join-room", ({ roomCode, userName, userId }) => {
       socket.join(roomCode);
-      socket.data = { roomCode, userName, userId, status: "focused", tabSwitches: 0, idleMinutes: 0, tasks: [] };
-      
+      socket.data = {
+        roomCode,
+        userName,
+        userId,
+        status: "focused",
+        tabSwitches: 0,
+        idleMinutes: 0,
+        tasks: [],
+      };
+
       const members = getRoomMembers(io, roomCode);
       io.to(roomCode).emit("members-updated", members);
     });
@@ -29,8 +37,11 @@ export function registerHandlers(io: Server) {
       if (socket.data.tabSwitches !== undefined) {
         socket.data.tabSwitches += 1;
         socket.data.status = "distracted";
-        io.to(roomCode).emit("member-distracted", { userName, switches: socket.data.tabSwitches });
-        
+        io.to(roomCode).emit("member-distracted", {
+          userName,
+          switches: socket.data.tabSwitches,
+        });
+
         // Members list update
         const members = getRoomMembers(io, roomCode);
         io.to(roomCode).emit("members-updated", members);
@@ -44,9 +55,30 @@ export function registerHandlers(io: Server) {
       io.to(roomCode).emit("members-updated", members);
     });
 
+    // Send Chat Emoji
+    socket.on("send-chat-emoji", ({ roomCode, emoji }) => {
+      const userName = socket.data.userName || "Anonymous";
+      const id = Math.random().toString(36).substring(2, 15);
+      const timestamp = Date.now();
+      
+      io.to(roomCode).emit("chat-message", {
+        id,
+        emoji,
+        userName,
+        timestamp
+      });
+    });
+
+    // Pomodoro Cycle
+    socket.on("pomodoro-cycle", ({ roomCode, phase, endsAt }) => {
+      io.to(roomCode).emit("pomodoro-cycle", { phase, endsAt });
+    });
+
     socket.on("disconnect", () => {
       if (socket.data.roomCode) {
-        io.to(socket.data.roomCode).emit("member-left", { userName: socket.data.userName });
+        io.to(socket.data.roomCode).emit("member-left", {
+          userName: socket.data.userName,
+        });
         const members = getRoomMembers(io, socket.data.roomCode, socket.id); // exclude this socket
         io.to(socket.data.roomCode).emit("members-updated", members);
       }
@@ -54,10 +86,14 @@ export function registerHandlers(io: Server) {
   });
 }
 
-function getRoomMembers(io: Server, roomCode: string, excludeSocketId?: string) {
+function getRoomMembers(
+  io: Server,
+  roomCode: string,
+  excludeSocketId?: string,
+) {
   const room = io.sockets.adapter.rooms.get(roomCode);
   if (!room) return [];
-  
+
   const members: Record<string, unknown>[] = [];
   room.forEach((socketId) => {
     if (socketId === excludeSocketId) return;
@@ -65,7 +101,7 @@ function getRoomMembers(io: Server, roomCode: string, excludeSocketId?: string) 
     if (socket && socket.data) {
       members.push({
         socketId: socket.id,
-        ...socket.data
+        ...socket.data,
       });
     }
   });

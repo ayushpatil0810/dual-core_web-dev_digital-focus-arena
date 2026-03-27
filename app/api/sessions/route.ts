@@ -16,7 +16,17 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { roomCode, focusScore, tabSwitches, idleMinutes, tasksCompleted, totalTasks } = body;
+    const {
+      roomCode,
+      focusScore,
+      tabSwitches,
+      idleMinutes,
+      tasksCompleted,
+      totalTasks,
+      pomodoroEnabled = false,
+      cyclesCompleted = 0,
+      breakMinutes = 0,
+    } = body;
 
     await db.insert(focusSession).values({
       id: nanoid(),
@@ -28,6 +38,9 @@ export async function POST(req: NextRequest) {
       idleMinutes: idleMinutes.toString(),
       tasksCompleted: tasksCompleted.toString(),
       totalTasks: totalTasks.toString(),
+      pomodoroEnabled,
+      cyclesCompleted: cyclesCompleted.toString(),
+      breakMinutes: breakMinutes.toString(),
     });
 
     return NextResponse.json({ success: true }, { status: 201 });

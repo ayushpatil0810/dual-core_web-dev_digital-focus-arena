@@ -128,3 +128,16 @@
     @apply font-sans;
   }
 }
+
+/* ── Emoji Reaction Float Animation ─────────────────────────────────────── */
+@keyframes reaction-float {
+  0%   { opacity: 1;   transform: translateY(0)    scale(1);   }
+  60%  { opacity: 0.8; transform: translateY(-40px) scale(1.4); }
+  100% { opacity: 0;   transform: translateY(-70px) scale(1.6); }
+}
+
+.animate-reaction-float {
+  animation: reaction-float 1.8s ease-out forwards;
+  /* Each reaction added gets its own instance so they don't interfere */
+  will-change: transform, opacity;
+}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { useSocket } from "@/hooks/useSocket";
 import { useDistractionTracker } from "@/hooks/useDistractionTracker";
 import { useSessionState } from "@/hooks/useSessionState";
@@ -13,6 +14,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Copy, Plus, Check, FlaskConical } from "lucide-react";
 import { useAmbientSound } from "@/hooks/useAmbientSound";
+import { usePomodoroTimer } from "@/hooks/usePomodoroTimer";
+import { DEFAULT_POMODORO_CONFIG, type PomodoroConfig } from "@/lib/pomodoro-types";
+import { ChatLog, type ChatMessage } from "@/components/ChatLog";
 
 export interface Member {
   socketId: string;
@@ -48,6 +52,9 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
   const [tasks, setTasks] = useState<{ id: string; text: string; completed: boolean }[]>([]);
   const [newTask, setNewTask] = useState("");
   const [researchMode, setResearchMode] = useState(false);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [pomodoroEnabled, setPomodoroEnabled] = useState(false);
+  const [pomodoroConfig, setPomodoroConfig] = useState<PomodoroConfig>(DEFAULT_POMODORO_CONFIG);
 
   const sessionActive = status === "active";
 
@@ -69,6 +76,15 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
   // Session state manager
   const { startSession, finalizeSession } = useSessionState();
   const { mode: soundMode, volume: soundVolume, setMode: setSoundMode, setVolume: setSoundVolume } = useAmbientSound();
+
+  // Pomodoro timer (work/break cycles)
+  const { phase: pomodoroPhase, cyclesCompleted, timeRemaining: pomodoroTimeRemaining } = usePomodoroTimer({
+    enabled: pomodoroEnabled && sessionActive,
+    config: pomodoroConfig,
+    socket,
+    roomCode,
+    isHost,
+  });
 
   /** Toggle research mode and broadcast updated status to the room */
   const toggleResearchMode = () => {
@@ -129,6 +145,10 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
       startSession();
     });
 
+    socket.on("chat-message", ({ id, emoji, userName, timestamp }) => {
+      setChatMessages((prev) => [...prev, { id, emoji, userName, timestamp }]);
+    });
+
     socket.on("session-ended", async () => {
       const tasksCompleted = tasks.filter((t) => t.completed).length;
       const totalTasks = tasks.length;
@@ -153,6 +173,9 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
           idleMinutes: Math.round(session.totalAwayTime / 60000),
           tasksCompleted: session.tasksCompleted,
           totalTasks: session.totalTasks,
+          pomodoroEnabled,
+          cyclesCompleted,
+          breakMinutes: pomodoroEnabled ? Math.floor(cyclesCompleted * pomodoroConfig.breakMinutes) : 0,
         }),
       }).catch(console.error);
 
@@ -172,6 +195,7 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
       socket.off("members-updated");
       socket.off("session-started");
       socket.off("session-ended");
+      socket.off("chat-message");
     };
   }, [socket, roomCode, router, tasks, distractions, totalAwayTime, inactivityEvents, startSession, finalizeSession]);
 
@@ -182,6 +206,24 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
       socket?.emit("end-session", { roomCode });
     }
   }, [remainingSeconds, status, endsAt, isHost, socket, roomCode]);
+
+  // ─── Pomodoro Phase Notifications ─────────────────────────────────────────
+  useEffect(() => {
+    if (!pomodoroEnabled || !sessionActive) return;
+    
+    // Show toast when phase changes
+    if (pomodoroPhase === "work") {
+      toast.info("🔴 Work Session Started", {
+        description: `Focus time: ${pomodoroConfig.workMinutes} minutes`,
+        duration: 3000,
+      });
+    } else if (pomodoroPhase === "break") {
+      toast.success("🟢 Break Time!", {
+        description: `Take a ${pomodoroConfig.breakMinutes} minute break`,
+        duration: 3000,
+      });
+    }
+  }, [pomodoroPhase, pomodoroEnabled, sessionActive, pomodoroConfig]);
 
   // ─── Task helpers ─────────────────────────────────────────────────────────
 
@@ -261,6 +303,17 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
                 : "Session Ended"}
             </span>
 
+            {/* Pomodoro Phase Indicator */}
+            {pomodoroEnabled && sessionActive && (
+              <div className={`px-4 py-2 border-2 uppercase font-bold text-xs tracking-widest ${
+                pomodoroPhase === "work"
+                  ? "border-[#ff3b00] text-[#ff3b00] bg-[#ff3b00]/10"
+                  : "border-blue-400 text-blue-400 bg-blue-400/10"
+              }`}>
+                {pomodoroPhase === "work" ? "🔴 WORK" : "🟢 BREAK"} {Math.floor(pomodoroTimeRemaining / 60)}:{(pomodoroTimeRemaining % 60).toString().padStart(2, '0')}
+              </div>
+            )}
+
             {/* Live distraction stats — only shown during active session */}
             {status === "active" && (
               <div className="flex gap-6 text-[10px] font-black uppercase tracking-widest opacity-60">
@@ -310,6 +363,32 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
             )}
           </div>
 
+          {/* Pomodoro Mode Toggle */}
+          {sessionActive && (
+            <div className="border-t-4 border-[#111]/20 dark:border-[#f5f4ef]/20 pt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xs font-bold uppercase tracking-widest opacity-70">Pomodoro Mode</h3>
+                <button
+                  onClick={() => setPomodoroEnabled(!pomodoroEnabled)}
+                  className={`px-3 py-1 text-xs font-black uppercase tracking-wider border-2 transition-colors ${
+                    pomodoroEnabled
+                      ? "bg-[#ff3b00] border-[#ff3b00] text-black"
+                      : "bg-transparent border-[#111]/20 dark:border-[#f5f4ef]/20 text-[#111] dark:text-[#f5f4ef]"
+                  }`}
+                >
+                  {pomodoroEnabled ? "ON" : "OFF"}
+                </button>
+              </div>
+              {pomodoroEnabled && (
+                <div className="text-xs space-y-1 opacity-70">
+                  <div>Phase: <span className="font-bold uppercase">{pomodoroPhase}</span></div>
+                  <div>Cycles: <span className="font-bold">{cyclesCompleted}</span></div>
+                  <div>Next: <span className="font-bold">{Math.floor(pomodoroTimeRemaining / 60)}:{(pomodoroTimeRemaining % 60).toString().padStart(2, '0')}</span></div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Ambient Sound — placed at the bottom of the left panel */}
           <AmbientSoundControl
             mode={soundMode}
@@ -338,7 +417,7 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
           </Button>
         </div>
 
-        <div className="p-8 flex-1 flex flex-col">
+        <div className="p-8 flex-1 flex flex-col overflow-hidden">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-xs font-bold uppercase tracking-widest opacity-50">
               Operatives ({members.filter((m) => m.socketId !== socket?.id).length + 1}/{roomData.maxMembers})
@@ -346,7 +425,7 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
             <span className="w-2 h-2 rounded-full bg-[#ff3b00] animate-pulse" />
           </div>
 
-          <div className="space-y-4 flex-1">
+          <div className="space-y-4 flex-shrink-0 mb-6">
             {/* Self Card */}
             <div className={`border-2 p-4 flex flex-col gap-3 relative overflow-hidden transition-colors ${
               researchMode
@@ -394,7 +473,7 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
               .map((m) => (
                 <div
                   key={m.socketId}
-                  className={`border-2 p-4 flex flex-col gap-3 relative overflow-hidden ${
+                  className={`border-2 p-4 flex flex-col gap-3 relative overflow-hidden transition-colors ${
                     m.status === "distracted"
                       ? "border-[#ff3b00]/50 bg-[#ff3b00]/5"
                       : "border-[#f5f4ef]/20 bg-[#f5f4ef]/5"
@@ -419,6 +498,29 @@ export default function RoomPage({ params: paramsPromise }: { params: Promise<{ 
                   </div>
                 </div>
               ))}
+          </div>
+
+          {/* Chat Section */}
+          <div className="flex flex-col gap-3 flex-1 min-h-0">
+            <div className="flex-1 min-h-0">
+              <ChatLog messages={chatMessages} />
+            </div>
+            <div className="flex-shrink-0">
+              <div className="bg-[#0a0a0a] border-2 border-[#f5f4ef]/20 p-2">
+                <div className="flex gap-1 justify-center">
+                  {["👍", "🔥", "💪", "⚡", "🎯"].map((emoji) => (
+                    <button
+                      key={emoji}
+                      onClick={() => socket?.emit("send-chat-emoji", { roomCode, emoji })}
+                      className="text-2xl hover:scale-125 transition-transform active:scale-95 px-2 py-1 cursor-pointer hover:bg-[#f5f4ef]/10"
+                      title={`Send ${emoji} to chat`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {isHost && (
