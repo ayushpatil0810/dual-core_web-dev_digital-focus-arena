@@ -25,10 +25,8 @@ export default async function DashboardPage() {
   const avgScore =
     totalSessions > 0
       ? Math.round(
-          sessions.reduce(
-            (sum, s) => sum + Number(s.focusScore ?? 0),
-            0,
-          ) / totalSessions,
+          sessions.reduce((sum, s) => sum + Number(s.focusScore ?? 0), 0) /
+            totalSessions,
         )
       : 0;
 
