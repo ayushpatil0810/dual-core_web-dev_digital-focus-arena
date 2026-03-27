@@ -65,6 +65,8 @@ export function useDistractionTracker(
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // Inactivity timer handle
   const inactivityTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Track whether the user is currently flagged as idle (to avoid duplicate emits)
+  const isIdleRef = useRef(false);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
@@ -176,10 +178,23 @@ export function useDistractionTracker(
       }
     };
 
+    /** Mark the user as active again and broadcast recovery */
+    const markActive = () => {
+      if (!isIdleRef.current) return;
+      isIdleRef.current = false;
+      setShowInactivity(false);
+      if (socket && roomCode && userName) {
+        socket.emit("user-active", { roomCode, userName });
+      }
+    };
+
     /** (Re)start the idle countdown — called on tab focus or any user input */
     const resetInactivityTimer = () => {
       // If the tab is not visible, don't track inactivity here
       if (document.visibilityState === "hidden") return;
+
+      // Any interaction marks the user as active if they were idle
+      markActive();
 
       if (inactivityTimerRef.current) clearTimeout(inactivityTimerRef.current);
 
@@ -188,6 +203,11 @@ export function useDistractionTracker(
         if (document.visibilityState === "hidden") return;
         setInactivityEvents((n) => n + 1);
         setShowInactivity(true);
+
+        if (!isIdleRef.current && socket && roomCode && userName) {
+          isIdleRef.current = true;
+          socket.emit("user-idle", { roomCode, userName });
+        }
       }, INACTIVITY_THRESHOLD_MS);
     };
 
@@ -199,6 +219,7 @@ export function useDistractionTracker(
         setShowInactivity(false);
       } else {
         // User returned to this tab → restart the idle clock fresh
+        markActive();
         resetInactivityTimer();
       }
     };

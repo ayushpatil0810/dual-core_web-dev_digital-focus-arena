@@ -25,7 +25,7 @@ export interface Member {
   socketId: string;
   userName?: string;
   userId?: string;
-  status: "focused" | "distracted" | "idle";
+  status: "focused" | "distracted" | "idle" | "research";
   tabSwitches: number;
   tasks?: { id: string; text: string; completed: boolean }[];
 }
@@ -38,6 +38,7 @@ export interface RoomData {
   duration: number;
   maxMembers: number;
 }
+
 
 export default function RoomPage({
   params: paramsPromise,
@@ -91,7 +92,6 @@ export default function RoomPage({
     sessionActive,
     researchMode,
   );
-
   // Session state manager
   const { startSession, finalizeSession } = useSessionState();
   const {
@@ -589,44 +589,72 @@ export default function RoomPage({
             {/* Other Members — exclude self to avoid duplicate */}
             {members
               .filter((m) => m.socketId !== socket?.id)
-              .map((m) => (
-                <div
-                  key={m.socketId}
-                  className={`border-2 p-4 flex flex-col gap-3 relative overflow-hidden transition-colors ${
-                    m.status === "distracted"
-                      ? "border-[#ff3b00]/50 bg-[#ff3b00]/5"
-                      : "border-[#f5f4ef]/20 bg-[#f5f4ef]/5"
-                  }`}
-                >
+              .map((m) => {
+                const statusLabel =
+                  m.status === "distracted"
+                    ? "Distracted"
+                    : m.status === "idle"
+                      ? "Idle"
+                      : m.status === "research"
+                        ? "Research"
+                        : "Focused";
+
+                const cardTone =
+                  m.status === "distracted"
+                    ? "border-[#ff3b00]/50 bg-[#ff3b00]/5"
+                    : m.status === "idle"
+                      ? "border-amber-400/40 bg-amber-400/10"
+                      : m.status === "research"
+                        ? "border-blue-400/50 bg-blue-400/10"
+                        : "border-[#f5f4ef]/20 bg-[#f5f4ef]/5";
+
+                const accentTone =
+                  m.status === "distracted"
+                    ? "bg-[#ff3b00]"
+                    : m.status === "idle"
+                      ? "bg-amber-400"
+                      : m.status === "research"
+                        ? "bg-blue-400"
+                        : "bg-[#f5f4ef]/50";
+
+                const badgeTone =
+                  m.status === "distracted"
+                    ? "bg-[#ff3b00] text-black"
+                    : m.status === "idle"
+                      ? "bg-amber-300 text-black"
+                      : m.status === "research"
+                        ? "bg-blue-300 text-black"
+                        : "bg-[#f5f4ef]/50 text-black";
+
+                return (
                   <div
-                    className={`absolute top-0 left-0 w-2 h-full ${m.status === "distracted" ? "bg-[#ff3b00]" : "bg-[#f5f4ef]/50"}`}
-                  />
-                  <div className="flex justify-between items-center pl-4">
-                    <div className="font-heading font-black text-xl uppercase tracking-wider truncate mr-2">
-                      {m.userName || "Unknown"}
+                    key={m.socketId}
+                    className={`border-2 p-4 flex flex-col gap-3 relative overflow-hidden transition-colors ${cardTone}`}
+                  >
+                    <div className={`absolute top-0 left-0 w-2 h-full ${accentTone}`} />
+                    <div className="flex justify-between items-center pl-4">
+                      <div className="font-heading font-black text-xl uppercase tracking-wider truncate mr-2">
+                        {m.userName || "Unknown"}
+                      </div>
+                      <div
+                        className={`px-2 py-1 text-[10px] font-black uppercase tracking-widest ${badgeTone}`}
+                      >
+                        {statusLabel}
+                      </div>
                     </div>
-                    <div
-                      className={`px-2 py-1 text-black text-[10px] font-black uppercase tracking-widest ${
-                        m.status === "distracted"
-                          ? "bg-[#ff3b00]"
-                          : "bg-[#f5f4ef]/50"
-                      }`}
-                    >
-                      {m.status}
+                    <div className="grid grid-cols-2 gap-2 pl-4 text-xs font-bold opacity-70">
+                      <div className={m.tabSwitches > 0 ? "text-[#ff3b00]" : ""}>
+                        DST: {m.tabSwitches}
+                      </div>
+                      <div>
+                        TSK: {" "}
+                        {m.tasks?.filter((t: any) => t.completed).length || 0}/
+                        {m.tasks?.length || 0}
+                      </div>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 pl-4 text-xs font-bold opacity-70">
-                    <div className={m.tabSwitches > 0 ? "text-[#ff3b00]" : ""}>
-                      DST: {m.tabSwitches}
-                    </div>
-                    <div>
-                      TSK:{" "}
-                      {m.tasks?.filter((t: any) => t.completed).length || 0}/
-                      {m.tasks?.length || 0}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
           </div>
 
           {/* Chat Section */}

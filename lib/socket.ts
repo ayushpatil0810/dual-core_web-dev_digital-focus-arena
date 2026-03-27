@@ -38,20 +38,41 @@ export function registerHandlers(io: Server) {
       io.to(roomCode).emit("session-ended", { reason: "host" });
     });
 
-    // Tab Switch
-    socket.on("tab-switch", ({ roomCode, userName }) => {
-      if (socket.data.tabSwitches !== undefined) {
+    // Tab Switch / status change (also used for research-mode status)
+    socket.on("tab-switch", ({ roomCode, userName, status }) => {
+      if (socket.data.tabSwitches === undefined) return;
+
+      const statusOverride = status as string | undefined;
+
+      if (statusOverride === "research") {
+        socket.data.status = "research";
+      } else if (statusOverride === "focused") {
+        socket.data.status = "focused";
+      } else {
         socket.data.tabSwitches += 1;
         socket.data.status = "distracted";
         io.to(roomCode).emit("member-distracted", {
           userName,
           switches: socket.data.tabSwitches,
         });
-
-        // Members list update
-        const members = getRoomMembers(io, roomCode);
-        io.to(roomCode).emit("members-updated", members);
       }
+
+      // Members list update
+      const members = getRoomMembers(io, roomCode);
+      io.to(roomCode).emit("members-updated", members);
+    });
+
+    // Idle / Active
+    socket.on("user-idle", ({ roomCode }) => {
+      socket.data.status = "idle";
+      const members = getRoomMembers(io, roomCode);
+      io.to(roomCode).emit("members-updated", members);
+    });
+
+    socket.on("user-active", ({ roomCode }) => {
+      socket.data.status = "focused";
+      const members = getRoomMembers(io, roomCode);
+      io.to(roomCode).emit("members-updated", members);
     });
 
     // Task Update
